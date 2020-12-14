@@ -6,6 +6,8 @@ contract Campaign {
         uint256 value;
         address recipient;
         bool complete;
+        uint256 approvalCount;
+        mapping(address => bool) approvals;
     }
 
     modifier restricted() {
@@ -15,7 +17,7 @@ contract Campaign {
 
     address public manager;
     uint256 public minimumContribution;
-    address[] public approvers;
+    mapping(address => bool) public approvers;
     Request[] public requests;
 
     constructor(uint256 minimum) public {
@@ -25,7 +27,7 @@ contract Campaign {
 
     function contribute() public payable {
         require(msg.value > minimumContribution);
-        approvers.push(msg.sender);
+        approvers[msg.sender] = true;
     }
 
     function createRequest(
@@ -33,29 +35,23 @@ contract Campaign {
         uint256 value,
         address recipient
     ) public restricted {
+        require(approvers[msg.sender]);
         Request memory newRequest = Request({
             description: description,
             value: value,
             recipient: recipient,
-            complete: false
+            complete: false,
+            approvalCount: 0
         });
 
         requests.push(newRequest);
     }
 
-    function approveRequest(Request request) public{
-        // Make sure person calling this function has donated 
-        bool isApprover = false;
-        for (uint i = 0; i < approvers.length; i++) {
-            if(approvers[i] == msg.sender){
-                isApprover = true;
-            }
-        }
-        require(isApprover);
-
-        // Make sure person calling this function hasnt voted before
-        for (uint i = 0; i < requests.approvers.length; i++){
-            require(requests.approvers[i] != msg.sender);
-        }
+    function approveRequest(uint256 index) public {
+        Request storage request = requests[index];
+        require(approvers[msg.sender]);
+        require(!request.approvals[msg.sender]);
+        request.approvals[msg.sender] = true;
+        request.approvalCount++;
     }
 }
